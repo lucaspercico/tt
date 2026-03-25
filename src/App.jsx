@@ -293,7 +293,7 @@ function App() {
           <AvatarPreview
             seed={state.avatarSeed}
             answers={state.answers}
-            title={state.completed ? 'Avatar do Certificado' : 'AvatarPreview'}
+            title={state.completed ? 'Avatar do Certificado' : 'Avatar em Evolução'}
           />
         </div>
       </div>
