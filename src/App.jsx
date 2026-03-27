@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti'
 import {
   ChevronLeft,
   ChevronRight,
+  MessageCircle,
   Rocket,
   Sparkles,
   Trophy,
@@ -11,61 +12,62 @@ import {
 import { buildAvatarUrl, generateHexCode } from './avatar'
 
 const STORAGE_KEY = 'research-quest-progress-v1'
+const DISCURSIVE_PER_REWARD = 3
 
-const QUESTIONS = [
+const DISCURSIVE_QUESTIONS = [
   {
     id: 1,
-    question: 'Área de Atuação?',
-    trait: 'top',
-    upgrades: [
-      { label: 'Exatas', value: 'shaggy' },
-      { label: 'Humanas', value: 'longButNotTooLong' },
-      { label: 'Saúde', value: 'shortCurly' },
-    ],
+    question: 'Qual tema você pesquisa hoje?',
+    field: 'discursive-1',
   },
   {
     id: 2,
-    question: 'Frequência de Pesquisa?',
-    trait: 'clothing',
-    upgrades: [
-      { label: 'Diária', value: 'blazerAndShirt' },
-      { label: 'Semanal', value: 'overall' },
-      { label: 'Mensal', value: 'shirtVNeck' },
-    ],
+    question: 'Qual é sua maior dificuldade na escrita acadêmica?',
+    field: 'discursive-2',
   },
   {
     id: 3,
-    question: 'Principal Desafio?',
-    trait: 'accessories',
-    upgrades: [
-      { label: 'Foco', value: 'round' },
-      { label: 'Tempo', value: 'prescription02' },
-      { label: 'Recursos', value: 'wayfarers' },
-    ],
+    question: 'Como você está usando IA no seu processo de estudo?',
+    field: 'discursive-3',
   },
+]
+
+const CUSTOMIZATION_REWARDS = [
   {
-    id: 4,
-    question: 'Uso de IA?',
-    trait: 'backgroundColor',
+    id: 'reward-top',
+    question: 'Escolha 1 visual para seu personagem',
+    trait: 'top',
     upgrades: [
-      { label: 'Uso intenso', value: 'b6e3f4' },
-      { label: 'Uso moderado', value: 'ffd5dc' },
-      { label: 'Ainda explorando', value: 'd1d4f9' },
+      { label: 'Corte Clássico', value: 'shaggy' },
+      { label: 'Visual Criativo', value: 'longButNotTooLong' },
+      { label: 'Estilo Curto', value: 'shortCurly' },
     ],
   },
 ]
+
+const SURVEY_STEPS = DISCURSIVE_QUESTIONS.flatMap((question, index) => {
+  const steps = [{ ...question, type: 'discursive' }]
+
+  if (index % DISCURSIVE_PER_REWARD === DISCURSIVE_PER_REWARD - 1 && CUSTOMIZATION_REWARDS[Math.floor(index / DISCURSIVE_PER_REWARD)]) {
+    steps.push({ ...CUSTOMIZATION_REWARDS[Math.floor(index / DISCURSIVE_PER_REWARD)], type: 'customization' })
+  }
+
+  return steps
+})
 
 const DEFAULT_STATE = {
   hasStarted: false,
   step: 0,
   avatarSeed: 'Especialista',
   answers: {},
+  discursiveAnswers: {},
   completed: false,
   certificateCode: '',
 }
 
-function FloatingQuest({ onStart }) {
+function FloatingQuest({ onStart, backgroundUrl = '' }) {
   const MotionAside = motion.aside
+  const hasBackground = Boolean(backgroundUrl)
 
   return (
     <MotionAside
@@ -73,8 +75,19 @@ function FloatingQuest({ onStart }) {
       animate={{ opacity: 1, y: [0, -8, 0], scale: 1 }}
       transition={{ duration: 0.7, y: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' } }}
       className="fixed bottom-6 right-6 z-30 max-w-sm rounded-2xl border-4 border-black bg-amber-300 p-5 text-left shadow-[8px_8px_0px_#111827]"
+      style={hasBackground
+        ? {
+            backgroundImage: `linear-gradient(rgba(252, 211, 77, 0.94), rgba(252, 211, 77, 0.94)), url(${backgroundUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }
+        : undefined}
       aria-live="polite"
     >
+      <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-white/85 px-3 py-1 text-sm font-black text-gray-900">
+        <MessageCircle size={16} aria-hidden="true" />
+        Popup chamativo
+      </span>
       <p className="text-lg font-semibold leading-snug text-black">
         Ganhe 10 Horas Complementares! 🎓 Monte seu Avatar de Especialista enquanto nos ajuda a evoluir.
       </p>
@@ -105,35 +118,48 @@ function AvatarPreview({ seed, answers, title = 'Avatar em evolução' }) {
   )
 }
 
-function SurveyManager({ step, answers, onChoose }) {
-  const currentQuestion = QUESTIONS[step]
+function SurveyManager({ step, answers, discursiveAnswers, onChoose, onDiscursiveChange }) {
+  const currentQuestion = SURVEY_STEPS[step]
 
   return (
     <section aria-live="polite" className="rounded-2xl border-4 border-black bg-white p-5 shadow-[6px_6px_0px_#111827]">
-      <p className="text-lg font-bold text-gray-900">Pergunta {step + 1} de {QUESTIONS.length}</p>
+      <p className="text-lg font-bold text-gray-900">Pergunta {step + 1} de {SURVEY_STEPS.length}</p>
       <h2 className="mt-2 text-2xl font-black text-gray-900">{currentQuestion.question}</h2>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        {currentQuestion.upgrades.map((upgrade) => {
-          const isSelected = answers[currentQuestion.trait] === upgrade.value
+      {currentQuestion.type === 'discursive' ? (
+        <textarea
+          value={discursiveAnswers[currentQuestion.field] || ''}
+          onChange={(event) => onDiscursiveChange(currentQuestion.field, event.target.value)}
+          placeholder="Escreva sua resposta..."
+          className="mt-4 min-h-36 w-full rounded-2xl border-4 border-black bg-gray-50 p-4 text-lg font-medium text-gray-900 outline-none transition focus:border-indigo-600"
+        />
+      ) : (
+        <>
+          <p className="mt-3 rounded-xl border-2 border-black bg-amber-100 px-3 py-2 text-sm font-bold text-gray-900">
+            A cada {DISCURSIVE_PER_REWARD} perguntas discursivas você desbloqueia 3 escolhas para o personagem.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {currentQuestion.upgrades.map((upgrade) => {
+              const isSelected = answers[currentQuestion.trait] === upgrade.value
 
-          return (
-            <button
-              key={upgrade.value}
-              type="button"
-              onClick={() => onChoose(currentQuestion.trait, upgrade.value)}
-              className={`rounded-2xl border-4 p-4 text-left text-lg font-semibold transition ${
-                isSelected
-                  ? 'border-indigo-600 bg-indigo-100 text-gray-900 shadow-[5px_5px_0px_#4f46e5]'
-                  : 'border-black bg-gray-50 text-gray-900 hover:-translate-y-0.5 hover:bg-amber-100'
-              }`}
-              aria-pressed={isSelected}
-            >
-              <span className="block text-xl font-black">{upgrade.label}</span>
-              <span className="mt-2 block text-base font-medium text-gray-700">Loot: {upgrade.value}</span>
-            </button>
-          )
-        })}
-      </div>
+              return (
+                <button
+                  key={upgrade.value}
+                  type="button"
+                  onClick={() => onChoose(currentQuestion.trait, upgrade.value)}
+                  className={`rounded-2xl border-4 p-4 text-left text-lg font-semibold transition ${
+                    isSelected
+                      ? 'border-indigo-600 bg-indigo-100 text-gray-900 shadow-[5px_5px_0px_#4f46e5]'
+                      : 'border-black bg-gray-50 text-gray-900 hover:-translate-y-0.5 hover:bg-amber-100'
+                  }`}
+                  aria-pressed={isSelected}
+                >
+                  <span className="block text-xl font-black">{upgrade.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </section>
   )
 }
@@ -143,6 +169,7 @@ function App() {
   const [state, setState] = useState(DEFAULT_STATE)
   const [showQuestTrigger, setShowQuestTrigger] = useState(false)
   const hasLoaded = useRef(false)
+  const popupBackgroundUrl = import.meta.env.VITE_POPUP_BACKGROUND_URL || ''
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -155,7 +182,12 @@ function App() {
 
     try {
       const parsed = JSON.parse(raw)
-      setState((current) => ({ ...current, ...parsed, answers: parsed.answers || {} }))
+      setState((current) => ({
+        ...current,
+        ...parsed,
+        answers: parsed.answers || {},
+        discursiveAnswers: parsed.discursiveAnswers || {},
+      }))
     } catch {
       window.localStorage.removeItem(STORAGE_KEY)
     } finally {
@@ -173,9 +205,25 @@ function App() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   }, [state])
 
-  const progress = state.completed ? 100 : Math.round((Object.keys(state.answers).length / QUESTIONS.length) * 100)
-  const currentQuestion = QUESTIONS[state.step]
-  const hasCurrentAnswer = currentQuestion ? Boolean(state.answers[currentQuestion.trait]) : false
+  const answeredSteps = useMemo(() => (
+    SURVEY_STEPS.reduce((count, question) => {
+      if (question.type === 'discursive') {
+        return (state.discursiveAnswers[question.field] || '').trim() ? count + 1 : count
+      }
+
+      return state.answers[question.trait] ? count + 1 : count
+    }, 0)
+  ), [state.answers, state.discursiveAnswers])
+  const progress = useMemo(
+    () => (state.completed ? 100 : Math.round((answeredSteps / SURVEY_STEPS.length) * 100)),
+    [answeredSteps, state.completed],
+  )
+  const currentQuestion = SURVEY_STEPS[state.step]
+  const hasCurrentAnswer = currentQuestion
+    ? currentQuestion.type === 'discursive'
+      ? Boolean((state.discursiveAnswers[currentQuestion.field] || '').trim())
+      : Boolean(state.answers[currentQuestion.trait])
+    : false
 
   const startQuest = () => {
     setState((current) => ({ ...current, hasStarted: true }))
@@ -191,6 +239,16 @@ function App() {
     }))
   }
 
+  const updateDiscursiveAnswer = (field, value) => {
+    setState((current) => ({
+      ...current,
+      discursiveAnswers: {
+        ...current.discursiveAnswers,
+        [field]: value,
+      },
+    }))
+  }
+
   const goBack = () => {
     setState((current) => ({ ...current, step: Math.max(current.step - 1, 0) }))
   }
@@ -201,12 +259,12 @@ function App() {
   }
 
   const goNext = () => {
-    if (state.step === QUESTIONS.length - 1) {
+    if (state.step === SURVEY_STEPS.length - 1) {
       finishQuest()
       return
     }
 
-    setState((current) => ({ ...current, step: Math.min(current.step + 1, QUESTIONS.length - 1) }))
+    setState((current) => ({ ...current, step: Math.min(current.step + 1, SURVEY_STEPS.length - 1) }))
   }
 
   const generateCertificate = () => {
@@ -266,7 +324,13 @@ function App() {
               </section>
             ) : (
               <>
-                <SurveyManager step={state.step} answers={state.answers} onChoose={chooseUpgrade} />
+                <SurveyManager
+                  step={state.step}
+                  answers={state.answers}
+                  discursiveAnswers={state.discursiveAnswers}
+                  onChoose={chooseUpgrade}
+                  onDiscursiveChange={updateDiscursiveAnswer}
+                />
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
@@ -282,7 +346,7 @@ function App() {
                     disabled={!hasCurrentAnswer}
                     className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {state.step === QUESTIONS.length - 1 ? 'Finalizar' : 'Próxima'}
+                    {state.step === SURVEY_STEPS.length - 1 ? 'Finalizar' : 'Próxima'}
                     <ChevronRight size={18} aria-hidden="true" />
                   </button>
                 </div>
@@ -298,7 +362,9 @@ function App() {
         </div>
       </div>
 
-      {!state.hasStarted && showQuestTrigger && <FloatingQuest onStart={startQuest} />}
+      {!state.hasStarted && showQuestTrigger && (
+        <FloatingQuest onStart={startQuest} backgroundUrl={popupBackgroundUrl} />
+      )}
     </main>
   )
 }
