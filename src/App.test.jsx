@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import App from './App'
 import { buildAvatarUrl } from './avatar'
 
@@ -26,19 +26,15 @@ describe('buildAvatarUrl', () => {
 describe('Research quest flow', () => {
   beforeEach(() => {
     localStorage.clear()
-    vi.useFakeTimers()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
   it('completes survey and shows certificate card', () => {
     render(<App />)
-
-    act(() => {
-      vi.advanceTimersByTime(2000)
-    })
+    fireEvent.click(screen.getByRole('main'))
 
     fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
 
@@ -51,20 +47,24 @@ describe('Research quest flow', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Uso IA para estruturar ideias e revisar.' } })
     fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
 
-    fireEvent.click(screen.getByRole('button', { name: /corte clássico/i }))
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Concluir meu artigo com clareza.' } })
+    fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Feedback rápido e metas semanais.' } })
+    fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: /óculos redondos/i }))
     fireEvent.click(screen.getByRole('button', { name: /finalizar/i }))
 
     expect(screen.getByText(/cartão de certificado de pesquisa/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /resgatar 10 horas/i })).toBeInTheDocument()
   })
 
-  it('shows customization choices after 3 discursive questions and requires answer before continuing', () => {
+  it('shows popup only after click and requires answer before continuing', () => {
     render(<App />)
 
-    act(() => {
-      vi.advanceTimersByTime(2000)
-    })
-
+    expect(screen.queryByRole('button', { name: /iniciar quest/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('main'))
     fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
 
     const nextButton = screen.getByRole('button', { name: /próxima/i })
@@ -80,9 +80,15 @@ describe('Research quest flow', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Resposta 3' } })
     fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
 
-    expect(screen.getByText(/a cada 3 perguntas discursivas/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /corte clássico/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /visual criativo/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /estilo curto/i })).toBeInTheDocument()
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Resposta 4' } })
+    fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Resposta 5' } })
+    fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
+
+    expect(screen.getByRole('heading', { name: /escolha 1 acessório dentre 3 opções para seu personagem/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /óculos redondos/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /óculos de sol/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /brinco/i })).toBeInTheDocument()
   })
 })
