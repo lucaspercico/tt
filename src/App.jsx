@@ -5,55 +5,22 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircle,
+  MousePointerClick,
   Rocket,
   Sparkles,
   Trophy,
 } from 'lucide-react'
 import { buildAvatarUrl, generateHexCode } from './avatar'
+import { QUEST_PAYLOAD } from './payload'
 
 const STORAGE_KEY = 'research-quest-progress-v1'
-const DISCURSIVE_PER_REWARD = 3
-
-const DISCURSIVE_QUESTIONS = [
-  {
-    id: 1,
-    question: 'Qual tema você pesquisa hoje?',
-    field: 'discursive-1',
-  },
-  {
-    id: 2,
-    question: 'Qual é sua maior dificuldade na escrita acadêmica?',
-    field: 'discursive-2',
-  },
-  {
-    id: 3,
-    question: 'Como você está usando IA no seu processo de estudo?',
-    field: 'discursive-3',
-  },
-]
-
-const CUSTOMIZATION_REWARDS = [
-  {
-    id: 'reward-top',
-    question: 'Escolha 1 visual para seu personagem',
-    trait: 'top',
-    upgrades: [
-      { label: 'Corte Clássico', value: 'shaggy' },
-      { label: 'Visual Criativo', value: 'longButNotTooLong' },
-      { label: 'Estilo Curto', value: 'shortCurly' },
-    ],
-  },
-]
-
-const SURVEY_STEPS = DISCURSIVE_QUESTIONS.flatMap((question, index) => {
-  const steps = [{ ...question, type: 'discursive' }]
-
-  if (index % DISCURSIVE_PER_REWARD === DISCURSIVE_PER_REWARD - 1 && CUSTOMIZATION_REWARDS[Math.floor(index / DISCURSIVE_PER_REWARD)]) {
-    steps.push({ ...CUSTOMIZATION_REWARDS[Math.floor(index / DISCURSIVE_PER_REWARD)], type: 'customization' })
-  }
-
-  return steps
-})
+const DISCURSIVE_QUESTIONS = QUEST_PAYLOAD.questions
+const ACCESSORY_STEP = {
+  id: 'accessory-selection',
+  ...QUEST_PAYLOAD.accessorySelection,
+  type: 'customization',
+}
+const SURVEY_STEPS = [...DISCURSIVE_QUESTIONS.map((question) => ({ ...question, type: 'discursive' })), ACCESSORY_STEP]
 
 const DEFAULT_STATE = {
   hasStarted: false,
@@ -86,18 +53,19 @@ function FloatingQuest({ onStart, backgroundUrl = '' }) {
     >
       <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-white/85 px-3 py-1 text-sm font-black text-gray-900">
         <MessageCircle size={16} aria-hidden="true" />
-        Popup chamativo
+        {QUEST_PAYLOAD.popup.badge}
       </span>
-      <p className="text-lg font-semibold leading-snug text-black">
-        Ganhe 10 Horas Complementares! 🎓 Monte seu Avatar de Especialista enquanto nos ajuda a evoluir.
-      </p>
+      <div className="text-lg font-semibold leading-snug text-black">
+        <p>{QUEST_PAYLOAD.popup.title}</p>
+        <p>{QUEST_PAYLOAD.popup.description}</p>
+      </div>
       <button
         type="button"
         onClick={onStart}
         className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white transition hover:-translate-y-0.5"
       >
         <Rocket size={20} aria-hidden="true" />
-        Iniciar Quest
+        {QUEST_PAYLOAD.popup.buttonLabel}
       </button>
     </MotionAside>
   )
@@ -135,7 +103,7 @@ function SurveyManager({ step, answers, discursiveAnswers, onChoose, onDiscursiv
       ) : (
         <>
           <p className="mt-3 rounded-xl border-2 border-black bg-amber-100 px-3 py-2 text-sm font-bold text-gray-900">
-            A cada {DISCURSIVE_PER_REWARD} perguntas discursivas você desbloqueia 3 escolhas para o personagem.
+            Escolha 1 acessório dentre 3 opções para finalizar o personagem.
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {currentQuestion.upgrades.map((upgrade) => {
@@ -196,8 +164,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setShowQuestTrigger(true), 2000)
-    return () => window.clearTimeout(timer)
+    const onUserClick = () => setShowQuestTrigger(true)
+    window.addEventListener('click', onUserClick, { once: true })
+    return () => window.removeEventListener('click', onUserClick)
   }, [])
 
   useEffect(() => {
@@ -272,7 +241,7 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F3F4F6] px-4 py-8 text-lg text-gray-900">
+    <main className="min-h-screen bg-white px-4 py-8 text-lg text-gray-900">
       <div className="mx-auto w-full max-w-5xl">
         <header className="mb-6 rounded-2xl border-4 border-black bg-white p-5 shadow-[8px_8px_0px_#111827]">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -297,8 +266,13 @@ function App() {
               <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
                 <h2 className="text-2xl font-black text-gray-900">Sua jornada começa em instantes</h2>
                 <p className="mt-2 text-lg text-gray-800">
-                  Responda as perguntas e desbloqueie partes do seu avatar de especialista.
+                  Clique em qualquer ponto da tela para exibir o popup e iniciar a jornada.
                 </p>
+                {!showQuestTrigger && (
+                  <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
+                    <MousePointerClick size={18} aria-hidden="true" /> Aguardando seu clique para abrir o popup
+                  </p>
+                )}
               </section>
             ) : state.completed ? (
               <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
