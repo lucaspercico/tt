@@ -82,6 +82,8 @@ function FloatingQuest({ onStart, backgroundUrl = '', isExpanded, onExpand, onCo
           }
         : undefined}
       aria-live="polite"
+      role="region"
+      aria-label="Popup chamativo da quest"
     >
       {isExpanded ? (
         <>
@@ -284,9 +286,7 @@ function App() {
       <div className="mx-auto w-full max-w-5xl">
         <header className="mb-6 rounded-2xl border-4 border-black bg-white p-5 shadow-[8px_8px_0px_#111827]">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-black text-gray-900 md:text-4xl">
-              {state.hasStarted ? 'Research Quest Builder' : 'Quest de Pesquisa'}
-            </h1>
+            <h1 className="text-3xl font-black text-gray-900 md:text-4xl">Quest de Pesquisa</h1>
             <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
               <Sparkles size={18} aria-hidden="true" /> {progress}% energia
             </span>
