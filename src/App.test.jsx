@@ -34,8 +34,8 @@ describe('Research quest flow', () => {
 
   it('completes survey and shows certificate card', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('main'))
-
+    const teaserButton = screen.getByRole('button', { name: /abrir popup chamativo/i })
+    fireEvent.mouseEnter(teaserButton)
     fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Pesquisa em educação e tecnologia.' } })
@@ -60,11 +60,14 @@ describe('Research quest flow', () => {
     expect(screen.getByRole('button', { name: /resgatar 10 horas/i })).toBeInTheDocument()
   })
 
-  it('shows popup only after click and requires answer before continuing', () => {
+  it('shows teaser as a bubble, expands on hover and requires answer before continuing', () => {
     render(<App />)
 
+    const teaserButton = screen.getByRole('button', { name: /abrir popup chamativo/i })
     expect(screen.queryByRole('button', { name: /iniciar quest/i })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('main'))
+
+    fireEvent.mouseEnter(teaserButton)
+    expect(screen.getByText(/ganhe 10 horas complementares/i)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
 
     const nextButton = screen.getByRole('button', { name: /próxima/i })
@@ -87,6 +90,7 @@ describe('Research quest flow', () => {
     fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
 
     expect(screen.getByRole('heading', { name: /escolha 1 acessório dentre 3 opções para seu personagem/i })).toBeInTheDocument()
+    expect(screen.getByText(/escolha 1 opção dentre 3 disponíveis/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /óculos redondos/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /óculos de sol/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /brinco/i })).toBeInTheDocument()
