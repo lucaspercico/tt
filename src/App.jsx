@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircle,
-  MousePointerClick,
   Rocket,
   Sparkles,
   Trophy,
@@ -15,12 +14,40 @@ import { QUEST_PAYLOAD } from './payload'
 
 const STORAGE_KEY = 'research-quest-progress-v1'
 const DISCURSIVE_QUESTIONS = QUEST_PAYLOAD.questions
-const ACCESSORY_STEP = {
-  id: 'accessory-selection',
-  ...QUEST_PAYLOAD.accessorySelection,
-  type: 'customization',
+
+function buildSurveySteps(questions, choiceSteps = []) {
+  const normalizedChoiceSteps = choiceSteps.map((choiceStep, index) => ({
+    ...choiceStep,
+    id: choiceStep.id || `choice-step-${index}`,
+    type: 'customization',
+  }))
+  const buckets = new Map()
+
+  normalizedChoiceSteps.forEach((choiceStep) => {
+    const requestedIndex = Number.isInteger(choiceStep.insertAfterQuestion)
+      ? choiceStep.insertAfterQuestion
+      : questions.length
+    const clampedIndex = Math.min(Math.max(requestedIndex, 0), questions.length)
+    const currentBucket = buckets.get(clampedIndex) || []
+    buckets.set(clampedIndex, [...currentBucket, choiceStep])
+  })
+  const steps = []
+
+  for (let index = 0; index <= questions.length; index += 1) {
+    const pendingChoiceSteps = buckets.get(index)
+    if (pendingChoiceSteps) {
+      steps.push(...pendingChoiceSteps)
+    }
+
+    if (index < questions.length) {
+      steps.push({ ...questions[index], type: 'discursive' })
+    }
+  }
+
+  return steps
 }
-const SURVEY_STEPS = [...DISCURSIVE_QUESTIONS.map((question) => ({ ...question, type: 'discursive' })), ACCESSORY_STEP]
+
+const SURVEY_STEPS = buildSurveySteps(DISCURSIVE_QUESTIONS, QUEST_PAYLOAD.choiceSteps)
 
 const DEFAULT_STATE = {
   hasStarted: false,
@@ -32,16 +59,21 @@ const DEFAULT_STATE = {
   certificateCode: '',
 }
 
-function FloatingQuest({ onStart, backgroundUrl = '' }) {
+function FloatingQuest({ onStart, backgroundUrl = '', isExpanded, onExpand, onCollapse }) {
   const MotionAside = motion.aside
   const hasBackground = Boolean(backgroundUrl)
 
   return (
     <MotionAside
+      onMouseEnter={onExpand}
+      onMouseLeave={onCollapse}
       initial={{ opacity: 0, y: 30, scale: 0.92 }}
-      animate={{ opacity: 1, y: [0, -8, 0], scale: 1 }}
-      transition={{ duration: 0.7, y: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' } }}
-      className="fixed bottom-6 right-6 z-30 max-w-sm rounded-2xl border-4 border-black bg-amber-300 p-5 text-left shadow-[8px_8px_0px_#111827]"
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      whileHover={{ scale: 1.02 }}
+      className={`fixed bottom-6 right-6 z-30 border-4 border-black bg-amber-300 text-left shadow-[8px_8px_0px_#111827] transition-all duration-200 ${
+        isExpanded ? 'w-[22rem] rounded-2xl p-5' : 'h-16 w-16 rounded-full p-0 animate-pulse'
+      }`}
       style={hasBackground
         ? {
             backgroundImage: `linear-gradient(rgba(252, 211, 77, 0.94), rgba(252, 211, 77, 0.94)), url(${backgroundUrl})`,
@@ -51,22 +83,35 @@ function FloatingQuest({ onStart, backgroundUrl = '' }) {
         : undefined}
       aria-live="polite"
     >
-      <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-white/85 px-3 py-1 text-sm font-black text-gray-900">
-        <MessageCircle size={16} aria-hidden="true" />
-        {QUEST_PAYLOAD.popup.badge}
-      </span>
-      <div className="text-lg font-semibold leading-snug text-black">
-        <p>{QUEST_PAYLOAD.popup.title}</p>
-        <p>{QUEST_PAYLOAD.popup.description}</p>
-      </div>
-      <button
-        type="button"
-        onClick={onStart}
-        className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white transition hover:-translate-y-0.5"
-      >
-        <Rocket size={20} aria-hidden="true" />
-        {QUEST_PAYLOAD.popup.buttonLabel}
-      </button>
+      {isExpanded ? (
+        <>
+          <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-white/85 px-3 py-1 text-sm font-black text-gray-900">
+            <MessageCircle size={16} aria-hidden="true" />
+            {QUEST_PAYLOAD.popup.badge}
+          </span>
+          <div className="mt-2 text-lg font-semibold leading-snug text-black">
+            <p>{QUEST_PAYLOAD.popup.title}</p>
+            <p>{QUEST_PAYLOAD.popup.description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onStart}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white transition hover:-translate-y-0.5"
+          >
+            <Rocket size={20} aria-hidden="true" />
+            {QUEST_PAYLOAD.popup.buttonLabel}
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-label="Abrir popup chamativo"
+          className="flex h-full w-full items-center justify-center"
+        >
+          <MessageCircle size={28} aria-hidden="true" />
+        </button>
+      )}
     </MotionAside>
   )
 }
@@ -103,7 +148,7 @@ function SurveyManager({ step, answers, discursiveAnswers, onChoose, onDiscursiv
       ) : (
         <>
           <p className="mt-3 rounded-xl border-2 border-black bg-amber-100 px-3 py-2 text-sm font-bold text-gray-900">
-            Escolha 1 acessório dentre 3 opções para finalizar o personagem.
+            Escolha 1 opção dentre {currentQuestion.upgrades.length} disponíveis para finalizar o personagem.
           </p>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {currentQuestion.upgrades.map((upgrade) => {
@@ -135,7 +180,7 @@ function SurveyManager({ step, answers, discursiveAnswers, onChoose, onDiscursiv
 function App() {
   const MotionBar = motion.div
   const [state, setState] = useState(DEFAULT_STATE)
-  const [showQuestTrigger, setShowQuestTrigger] = useState(false)
+  const [isTeaserExpanded, setIsTeaserExpanded] = useState(false)
   const hasLoaded = useRef(false)
   const popupBackgroundUrl = import.meta.env.VITE_POPUP_BACKGROUND_URL || ''
 
@@ -161,12 +206,6 @@ function App() {
     } finally {
       hasLoaded.current = true
     }
-  }, [])
-
-  useEffect(() => {
-    const onUserClick = () => setShowQuestTrigger(true)
-    window.addEventListener('click', onUserClick, { once: true })
-    return () => window.removeEventListener('click', onUserClick)
   }, [])
 
   useEffect(() => {
@@ -245,7 +284,9 @@ function App() {
       <div className="mx-auto w-full max-w-5xl">
         <header className="mb-6 rounded-2xl border-4 border-black bg-white p-5 shadow-[8px_8px_0px_#111827]">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-3xl font-black text-gray-900 md:text-4xl">Research Quest Builder</h1>
+            <h1 className="text-3xl font-black text-gray-900 md:text-4xl">
+              {state.hasStarted ? 'Research Quest Builder' : 'Quest de Pesquisa'}
+            </h1>
             <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
               <Sparkles size={18} aria-hidden="true" /> {progress}% energia
             </span>
@@ -266,13 +307,8 @@ function App() {
               <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
                 <h2 className="text-2xl font-black text-gray-900">Sua jornada começa em instantes</h2>
                 <p className="mt-2 text-lg text-gray-800">
-                  Clique em qualquer ponto da tela para exibir o popup e iniciar a jornada.
+                  Use a bolinha chamativa no canto para abrir o popup e iniciar a jornada.
                 </p>
-                {!showQuestTrigger && (
-                  <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
-                    <MousePointerClick size={18} aria-hidden="true" /> Aguardando seu clique para abrir o popup
-                  </p>
-                )}
               </section>
             ) : state.completed ? (
               <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
@@ -336,8 +372,14 @@ function App() {
         </div>
       </div>
 
-      {!state.hasStarted && showQuestTrigger && (
-        <FloatingQuest onStart={startQuest} backgroundUrl={popupBackgroundUrl} />
+      {!state.hasStarted && (
+        <FloatingQuest
+          onStart={startQuest}
+          backgroundUrl={popupBackgroundUrl}
+          isExpanded={isTeaserExpanded}
+          onExpand={() => setIsTeaserExpanded(true)}
+          onCollapse={() => setIsTeaserExpanded(false)}
+        />
       )}
     </main>
   )

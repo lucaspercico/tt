@@ -32,13 +32,17 @@ export const QUEST_PAYLOAD = {
       field: 'discursive-5',
     },
   ],
-  accessorySelection: {
-    question: 'Escolha 1 acessório dentre 3 opções para seu personagem',
-    trait: 'accessories',
-    upgrades: [
-      { label: 'Óculos Redondos', value: 'round' },
-      { label: 'Óculos de Sol', value: 'wayfarers' },
-      { label: 'Brinco', value: 'kurt' },
-    ],
-  },
+  choiceSteps: [
+    {
+      id: 'accessory-selection',
+      insertAfterQuestion: 5,
+      question: 'Escolha 1 acessório dentre 3 opções para seu personagem',
+      trait: 'accessories',
+      upgrades: [
+        { label: 'Óculos Redondos', value: 'round' },
+        { label: 'Óculos de Sol', value: 'wayfarers' },
+        { label: 'Brinco', value: 'kurt' },
+      ],
+    },
+  ],
 }
