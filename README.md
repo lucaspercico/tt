@@ -25,10 +25,10 @@ Ao abrir a tela inicial:
 
 O app usa **dois backgrounds independentes**, configurados por variáveis de ambiente em `src/App.jsx`:
 
-- `homeBackgroundUrl` (linha ~190): controla a **Tela Inicial**
-- `questBackgroundUrl` (linha ~191): controla a **Tela da Quest**
+- `homeBackgroundUrl`: controla a **Tela Inicial**
+- `questBackgroundUrl`: controla a **Tela da Quest**
 
-Na renderização do `<main>` (linhas ~289-307), a regra é:
+Na renderização do `<main>` no componente `App`, a regra é:
 
 1. Se `!state.hasStarted` e existir `VITE_HOME_BACKGROUND_URL`, aplica o fundo inicial.
 2. Se `state.hasStarted` e existir `VITE_QUEST_BACKGROUND_URL`, aplica o fundo da quest.

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import App from './App'
+import { getMainBackgroundStyle, sanitizeBackgroundUrl, withLayeredAccessory } from './appHelpers'
 import { buildAvatarUrl, resolveAccessoryValue } from './avatar'
 
 vi.mock('canvas-confetti', () => ({
@@ -36,6 +37,39 @@ describe('buildAvatarUrl', () => {
       accessories: 'wayfarers,round',
     })
     expect(fromLegacy).toBe('wayfarers')
+  })
+})
+
+describe('helpers', () => {
+  it('sanitizes background URLs and rejects unsafe protocols/patterns', () => {
+    expect(sanitizeBackgroundUrl('https://example.com/bg.png')).toBe('https://example.com/bg.png')
+    expect(sanitizeBackgroundUrl('/bg.png')).toBe('/bg.png')
+    expect(sanitizeBackgroundUrl(' jAvAsCrIpT:alert(1) ')).toBe('')
+    expect(sanitizeBackgroundUrl('JaVaScRiPt:alert(1)')).toBe('')
+    expect(sanitizeBackgroundUrl('data:image/svg+xml,<svg></svg>')).toBe('')
+    expect(sanitizeBackgroundUrl('https://a.com/x.png");background:url(https://evil.com)')).toBe('')
+    expect(sanitizeBackgroundUrl('https://a.com/x{y}.png')).toBe('')
+  })
+
+  it('applies layered accessory rules with defaults and non-accessory traits', () => {
+    const nonAccessory = withLayeredAccessory({}, 'top', 'shortHair')
+    expect(nonAccessory.top).toBe('shortHair')
+    expect(nonAccessory.accessorySlots).toBeUndefined()
+
+    const accessoryDefault = withLayeredAccessory(null, 'accessories', 'round', null)
+    expect(accessoryDefault.accessories).toBe('round')
+    expect(accessoryDefault.accessorySlots.face.value).toBe('round')
+    expect(accessoryDefault.accessorySlots.face.layer).toBe(100)
+
+    const accessoryCustom = withLayeredAccessory({}, 'accessories', 'kurt', { slot: 'ear', layer: 120 })
+    expect(accessoryCustom.accessorySlots.ear.value).toBe('kurt')
+    expect(accessoryCustom.accessorySlots.ear.layer).toBe(120)
+  })
+
+  it('returns main background style based on current app stage', () => {
+    expect(getMainBackgroundStyle(false, '/home.png', '/quest.png')?.backgroundImage).toBe('url(/home.png)')
+    expect(getMainBackgroundStyle(true, '/home.png', '/quest.png')?.backgroundImage).toBe('url(/quest.png)')
+    expect(getMainBackgroundStyle(true, '/home.png', '')).toBeUndefined()
   })
 })
 

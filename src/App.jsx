@@ -11,6 +11,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { buildAvatarUrl, generateHexCode } from './avatar'
+import { getMainBackgroundStyle, sanitizeBackgroundUrl, withLayeredAccessory } from './appHelpers'
 import heroImage from './assets/hero.png'
 import { QUEST_PAYLOAD } from './payload'
 
@@ -97,36 +98,6 @@ function FloatingQuest({ onStart, backgroundUrl = '' }) {
   )
 }
 
-function withLayeredAccessory(answers, trait, value) {
-  const currentAnswers = answers && typeof answers === 'object' ? answers : {}
-  const currentSlots = currentAnswers.accessorySlots && typeof currentAnswers.accessorySlots === 'object'
-    ? currentAnswers.accessorySlots
-    : {}
-  const accessoryConfig = QUEST_PAYLOAD?.accessorySelection
-  const defaultSlot = accessoryConfig?.slot || 'face'
-  const defaultLayer = Number.isFinite(accessoryConfig?.layer) ? accessoryConfig.layer : 100
-  const normalizedTrait = typeof trait === 'string' ? trait : ''
-
-  if (normalizedTrait !== 'accessories') {
-    return {
-      ...currentAnswers,
-      [trait]: value,
-    }
-  }
-
-  return {
-    ...currentAnswers,
-    accessories: value,
-    accessorySlots: {
-      ...currentSlots,
-      [defaultSlot]: {
-        value,
-        layer: defaultLayer,
-      },
-    },
-  }
-}
-
 function AvatarPreview({ seed, answers, title = 'Avatar em evolução' }) {
   const avatarUrl = useMemo(() => buildAvatarUrl(seed, answers), [seed, answers])
 
@@ -192,9 +163,18 @@ function App() {
   const MotionBar = motion.div
   const [state, setState] = useState(DEFAULT_STATE)
   const hasLoaded = useRef(false)
-  const popupBackgroundUrl = (import.meta.env.VITE_POPUP_BACKGROUND_URL || '').trim() || heroImage
-  const homeBackgroundUrl = (import.meta.env.VITE_HOME_BACKGROUND_URL || '').trim()
-  const questBackgroundUrl = (import.meta.env.VITE_QUEST_BACKGROUND_URL || '').trim()
+  const popupBackgroundUrl = useMemo(
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_POPUP_BACKGROUND_URL || '') || heroImage,
+    [],
+  )
+  const homeBackgroundUrl = useMemo(
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_HOME_BACKGROUND_URL || ''),
+    [],
+  )
+  const questBackgroundUrl = useMemo(
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_QUEST_BACKGROUND_URL || ''),
+    [],
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -244,6 +224,7 @@ function App() {
       ? Boolean((state.discursiveAnswers[currentQuestion.field] || '').trim())
       : Boolean(state.answers[currentQuestion.trait])
     : false
+  const mainBackgroundStyle = getMainBackgroundStyle(state.hasStarted, homeBackgroundUrl, questBackgroundUrl)
 
   const startQuest = () => {
     setState((current) => ({ ...current, hasStarted: true }))
@@ -291,19 +272,7 @@ function App() {
   return (
     <main
       className="min-h-screen bg-white px-4 py-8 text-lg text-gray-900"
-      style={homeBackgroundUrl && !state.hasStarted
-        ? {
-            backgroundImage: `url(${homeBackgroundUrl})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }
-        : questBackgroundUrl && state.hasStarted
-          ? {
-              backgroundImage: `url(${questBackgroundUrl})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }
-          : undefined}
+      style={mainBackgroundStyle}
     >
       <div className="mx-auto w-full max-w-5xl">
         {!state.hasStarted ? (
