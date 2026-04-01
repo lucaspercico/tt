@@ -35,6 +35,8 @@ export const QUEST_PAYLOAD = {
   accessorySelection: {
     question: 'Escolha 1 acessório dentre 3 opções para seu personagem',
     trait: 'accessories',
+    slot: 'face',
+    layer: 100,
     upgrades: [
       { label: 'Óculos Redondos', value: 'round' },
       { label: 'Óculos de Sol', value: 'wayfarers' },

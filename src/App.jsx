@@ -11,6 +11,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { buildAvatarUrl, generateHexCode } from './avatar'
+import { getMainBackgroundStyle, sanitizeBackgroundUrl, withLayeredAccessory } from './appHelpers'
 import heroImage from './assets/hero.png'
 import { QUEST_PAYLOAD } from './payload'
 
@@ -162,7 +163,18 @@ function App() {
   const MotionBar = motion.div
   const [state, setState] = useState(DEFAULT_STATE)
   const hasLoaded = useRef(false)
-  const popupBackgroundUrl = (import.meta.env.VITE_POPUP_BACKGROUND_URL || '').trim() || heroImage
+  const popupBackgroundUrl = useMemo(
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_POPUP_BACKGROUND_URL || '') || heroImage,
+    [],
+  )
+  const homeBackgroundUrl = useMemo(
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_HOME_BACKGROUND_URL || ''),
+    [],
+  )
+  const questBackgroundUrl = useMemo(
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_QUEST_BACKGROUND_URL || ''),
+    [],
+  )
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -212,6 +224,7 @@ function App() {
       ? Boolean((state.discursiveAnswers[currentQuestion.field] || '').trim())
       : Boolean(state.answers[currentQuestion.trait])
     : false
+  const mainBackgroundStyle = getMainBackgroundStyle(state.hasStarted, homeBackgroundUrl, questBackgroundUrl)
 
   const startQuest = () => {
     setState((current) => ({ ...current, hasStarted: true }))
@@ -220,10 +233,7 @@ function App() {
   const chooseUpgrade = (trait, value) => {
     setState((current) => ({
       ...current,
-      answers: {
-        ...current.answers,
-        [trait]: value,
-      },
+      answers: withLayeredAccessory(current.answers, trait, value),
     }))
   }
 
@@ -260,97 +270,105 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-4 py-8 text-lg text-gray-900">
+    <main
+      className="min-h-screen bg-white px-4 py-8 text-lg text-gray-900"
+      style={mainBackgroundStyle}
+    >
       <div className="mx-auto w-full max-w-5xl">
-        <header className="mb-6 rounded-2xl border-4 border-black bg-white p-5 shadow-[8px_8px_0px_#111827]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        {!state.hasStarted ? (
+          <section className="rounded-2xl border-4 border-black bg-white/95 p-6 shadow-[6px_6px_0px_#111827]">
             <h1 className="text-3xl font-black text-gray-900 md:text-4xl">Research Quest Builder</h1>
-            <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
-              <Sparkles size={18} aria-hidden="true" /> {progress}% energia
-            </span>
-          </div>
-          <div className="mt-4 h-5 w-full rounded-full border-2 border-black bg-gray-200 p-0.5">
-            <MotionBar
-              className="h-full rounded-full bg-indigo-500"
-              initial={false}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-            />
-          </div>
-        </header>
+            <h2 className="mt-4 text-2xl font-black text-gray-900">Sua jornada começa em instantes</h2>
+            <p className="mt-2 text-lg text-gray-800">
+              Passe o mouse sobre o ícone flutuante no canto inferior direito para abrir o popup e iniciar a jornada.
+            </p>
+            <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
+              <MousePointerClick size={18} aria-hidden="true" /> Sem clique obrigatório: basta hover no ícone flutuante
+            </p>
+          </section>
+        ) : (
+          <>
+            <header className="mb-6 rounded-2xl border-4 border-black bg-white p-5 shadow-[8px_8px_0px_#111827]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-3xl font-black text-gray-900 md:text-4xl">Research Quest Builder</h1>
+                <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
+                  <Sparkles size={18} aria-hidden="true" /> {progress}% energia
+                </span>
+              </div>
+              <div className="mt-4 h-5 w-full rounded-full border-2 border-black bg-gray-200 p-0.5">
+                <MotionBar
+                  className="h-full rounded-full bg-indigo-500"
+                  initial={false}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                />
+              </div>
+            </header>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_330px]">
-          <section className="space-y-4">
-            {!state.hasStarted ? (
-              <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
-                <h2 className="text-2xl font-black text-gray-900">Sua jornada começa em instantes</h2>
-                <p className="mt-2 text-lg text-gray-800">
-                  Passe o mouse sobre o ícone flutuante no canto inferior direito para abrir o popup e iniciar a jornada.
-                </p>
-                <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
-                  <MousePointerClick size={18} aria-hidden="true" /> Sem clique obrigatório: basta hover no ícone flutuante
-                </p>
-              </section>
-            ) : state.completed ? (
-              <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
-                <div className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
-                  <Trophy size={18} aria-hidden="true" /> Missão completa
-                </div>
-                <h2 className="mt-3 text-3xl font-black text-gray-900">Cartão de Certificado de Pesquisa</h2>
-                <p className="mt-2 text-lg text-gray-800">
-                  Avatar final desbloqueado! Gere seu código único para validar as 10 horas complementares.
-                </p>
-                <button
-                  type="button"
-                  onClick={generateCertificate}
-                  className="mt-5 rounded-xl border-2 border-black bg-indigo-500 px-5 py-3 text-lg font-black text-white transition hover:-translate-y-0.5"
-                >
-                  Resgatar 10 Horas
-                </button>
-                {state.certificateCode && (
-                  <p className="mt-4 rounded-xl border-2 border-black bg-amber-100 px-4 py-3 text-xl font-black tracking-wider">
-                    Código de Validação: {state.certificateCode}
-                  </p>
+            <div className="grid gap-6 lg:grid-cols-[1fr_330px]">
+              <section className="space-y-4">
+                {state.completed ? (
+                  <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
+                    <div className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
+                      <Trophy size={18} aria-hidden="true" /> Missão completa
+                    </div>
+                    <h2 className="mt-3 text-3xl font-black text-gray-900">Cartão de Certificado de Pesquisa</h2>
+                    <p className="mt-2 text-lg text-gray-800">
+                      Avatar final desbloqueado! Gere seu código único para validar as 10 horas complementares.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={generateCertificate}
+                      className="mt-5 rounded-xl border-2 border-black bg-indigo-500 px-5 py-3 text-lg font-black text-white transition hover:-translate-y-0.5"
+                    >
+                      Resgatar 10 Horas
+                    </button>
+                    {state.certificateCode && (
+                      <p className="mt-4 rounded-xl border-2 border-black bg-amber-100 px-4 py-3 text-xl font-black tracking-wider">
+                        Código de Validação: {state.certificateCode}
+                      </p>
+                    )}
+                  </section>
+                ) : (
+                  <>
+                    <SurveyManager
+                      step={state.step}
+                      answers={state.answers}
+                      discursiveAnswers={state.discursiveAnswers}
+                      onChoose={chooseUpgrade}
+                      onDiscursiveChange={updateDiscursiveAnswer}
+                    />
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={goBack}
+                        disabled={state.step === 0}
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2 text-lg font-bold text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <ChevronLeft size={18} aria-hidden="true" /> Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={goNext}
+                        disabled={!hasCurrentAnswer}
+                        className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {state.step === SURVEY_STEPS.length - 1 ? 'Finalizar' : 'Próxima'}
+                        <ChevronRight size={18} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </>
                 )}
               </section>
-            ) : (
-              <>
-                <SurveyManager
-                  step={state.step}
-                  answers={state.answers}
-                  discursiveAnswers={state.discursiveAnswers}
-                  onChoose={chooseUpgrade}
-                  onDiscursiveChange={updateDiscursiveAnswer}
-                />
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    disabled={state.step === 0}
-                    className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2 text-lg font-bold text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ChevronLeft size={18} aria-hidden="true" /> Voltar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    disabled={!hasCurrentAnswer}
-                    className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {state.step === SURVEY_STEPS.length - 1 ? 'Finalizar' : 'Próxima'}
-                    <ChevronRight size={18} aria-hidden="true" />
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
 
-          <AvatarPreview
-            seed={state.avatarSeed}
-            answers={state.answers}
-            title={state.completed ? 'Avatar do Certificado' : 'Avatar em Evolução'}
-          />
-        </div>
+              <AvatarPreview
+                seed={state.avatarSeed}
+                answers={state.answers}
+                title={state.completed ? 'Avatar do Certificado' : 'Avatar em Evolução'}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {!state.hasStarted && (

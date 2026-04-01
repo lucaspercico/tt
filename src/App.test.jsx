@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import App from './App'
-import { buildAvatarUrl } from './avatar'
+import { getMainBackgroundStyle, sanitizeBackgroundUrl, withLayeredAccessory } from './appHelpers'
+import { buildAvatarUrl, resolveAccessoryValue } from './avatar'
 
 vi.mock('canvas-confetti', () => ({
   default: vi.fn(),
@@ -21,6 +22,54 @@ describe('buildAvatarUrl', () => {
     expect(url).toContain('accessories=round')
     expect(url).toContain('accessoriesProbability=100')
     expect(url).toContain('backgroundColor=ffd5dc')
+  })
+
+  it('resolves accessory using layered slot and avoids duplicated comma-separated values', () => {
+    const fromSlots = resolveAccessoryValue({
+      accessories: 'wayfarers,round',
+      accessorySlots: {
+        face: { value: 'round', layer: 100 },
+      },
+    })
+    expect(fromSlots).toBe('round')
+
+    const fromLegacy = resolveAccessoryValue({
+      accessories: 'wayfarers,round',
+    })
+    expect(fromLegacy).toBe('wayfarers')
+  })
+})
+
+describe('helpers', () => {
+  it('sanitizes background URLs and rejects unsafe protocols/patterns', () => {
+    expect(sanitizeBackgroundUrl('https://example.com/bg.png')).toBe('https://example.com/bg.png')
+    expect(sanitizeBackgroundUrl('/bg.png')).toBe('/bg.png')
+    expect(sanitizeBackgroundUrl(' jAvAsCrIpT:alert(1) ')).toBe('')
+    expect(sanitizeBackgroundUrl('JaVaScRiPt:alert(1)')).toBe('')
+    expect(sanitizeBackgroundUrl('data:image/svg+xml,<svg></svg>')).toBe('')
+    expect(sanitizeBackgroundUrl('https://a.com/x.png");background:url(https://evil.com)')).toBe('')
+    expect(sanitizeBackgroundUrl('https://a.com/x{y}.png')).toBe('')
+  })
+
+  it('applies layered accessory rules with defaults and non-accessory traits', () => {
+    const nonAccessory = withLayeredAccessory({}, 'top', 'shortHair')
+    expect(nonAccessory.top).toBe('shortHair')
+    expect(nonAccessory.accessorySlots).toBeUndefined()
+
+    const accessoryDefault = withLayeredAccessory(null, 'accessories', 'round', null)
+    expect(accessoryDefault.accessories).toBe('round')
+    expect(accessoryDefault.accessorySlots.face.value).toBe('round')
+    expect(accessoryDefault.accessorySlots.face.layer).toBe(100)
+
+    const accessoryCustom = withLayeredAccessory({}, 'accessories', 'kurt', { slot: 'ear', layer: 120 })
+    expect(accessoryCustom.accessorySlots.ear.value).toBe('kurt')
+    expect(accessoryCustom.accessorySlots.ear.layer).toBe(120)
+  })
+
+  it('returns main background style based on current app stage', () => {
+    expect(getMainBackgroundStyle(false, '/home.png', '/quest.png')?.backgroundImage).toBe('url(/home.png)')
+    expect(getMainBackgroundStyle(true, '/home.png', '/quest.png')?.backgroundImage).toBe('url(/quest.png)')
+    expect(getMainBackgroundStyle(true, '/home.png', '')).toBeUndefined()
   })
 })
 
@@ -90,5 +139,24 @@ describe('Research quest flow', () => {
     expect(screen.getByRole('button', { name: /óculos redondos/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /óculos de sol/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /brinco/i })).toBeInTheDocument()
+  })
+
+  it('stores only one accessory item per slot and keeps selection stable', () => {
+    render(<App />)
+    fireEvent.mouseEnter(screen.getByLabelText(/abrir detalhes da quest/i))
+    fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
+
+    for (let index = 1; index <= 5; index += 1) {
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: `Resposta ${index}` } })
+      fireEvent.click(screen.getByRole('button', { name: /próxima/i }))
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: /óculos redondos/i }))
+    fireEvent.click(screen.getByRole('button', { name: /óculos de sol/i }))
+
+    const persisted = JSON.parse(localStorage.getItem('research-quest-progress-v1'))
+    expect(persisted.answers.accessories).toBe('wayfarers')
+    expect(persisted.answers.accessorySlots.face.value).toBe('wayfarers')
+    expect(persisted.answers.accessorySlots.face.layer).toBe(100)
   })
 })
