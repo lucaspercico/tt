@@ -13,6 +13,8 @@ import {
 import { buildAvatarUrl, generateHexCode } from './avatar'
 import { getMainBackgroundStyle, sanitizeBackgroundUrl, withLayeredAccessory } from './appHelpers'
 import heroImage from './assets/hero.png'
+import unisuam from './assets/oioi.png'
+import quest from './assets/img_quest.jpg'
 import { QUEST_PAYLOAD } from './payload'
 
 const STORAGE_KEY = 'research-quest-progress-v1'
@@ -168,11 +170,11 @@ function App() {
     [],
   )
   const homeBackgroundUrl = useMemo(
-    () => sanitizeBackgroundUrl(import.meta.env.VITE_HOME_BACKGROUND_URL || ''),
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_HOME_BACKGROUND_URL || '') || unisuam ,
     [],
   )
   const questBackgroundUrl = useMemo(
-    () => sanitizeBackgroundUrl(import.meta.env.VITE_QUEST_BACKGROUND_URL || ''),
+    () => sanitizeBackgroundUrl(import.meta.env.VITE_QUEST_BACKGROUND_URL || '') || quest,
     [],
   )
 
@@ -269,28 +271,21 @@ function App() {
     setState((current) => ({ ...current, certificateCode: current.certificateCode || generateHexCode() }))
   }
 
-  return (
+ return (
     <main
       className="min-h-screen bg-white px-4 py-8 text-lg text-gray-900"
       style={mainBackgroundStyle}
     >
       <div className="mx-auto w-full max-w-5xl">
         {!state.hasStarted ? (
-          <section className="rounded-2xl border-4 border-black bg-white/95 p-6 shadow-[6px_6px_0px_#111827]">
-            <h1 className="text-3xl font-black text-gray-900 md:text-4xl">Research Quest Builder</h1>
-            <h2 className="mt-4 text-2xl font-black text-gray-900">Sua jornada começa em instantes</h2>
-            <p className="mt-2 text-lg text-gray-800">
-              Passe o mouse sobre o ícone flutuante no canto inferior direito para abrir o popup e iniciar a jornada.
-            </p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
-              <MousePointerClick size={18} aria-hidden="true" /> Sem clique obrigatório: basta hover no ícone flutuante
-            </p>
-          </section>
+          /* 1. Aqui removemos o h1 e a section da tela inicial */
+          /* Deixamos null para que nada apareça antes do clique, apenas o fundo */
+          null 
         ) : (
           <>
             <header className="mb-6 rounded-2xl border-4 border-black bg-white p-5 shadow-[8px_8px_0px_#111827]">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h1 className="text-3xl font-black text-gray-900 md:text-4xl">Research Quest Builder</h1>
+                {/* 2. Removido o h1 daqui também para sumir da tela da Quest */}
                 <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-amber-300 px-3 py-1 text-base font-bold">
                   <Sparkles size={18} aria-hidden="true" /> {progress}% energia
                 </span>
@@ -325,7 +320,7 @@ function App() {
                     </button>
                     {state.certificateCode && (
                       <p className="mt-4 rounded-xl border-2 border-black bg-amber-100 px-4 py-3 text-xl font-black tracking-wider">
-                        Código de Validação: {state.certificateCode}
+                        Pedido enviado, recebimento automático em X dias.
                       </p>
                     )}
                   </section>

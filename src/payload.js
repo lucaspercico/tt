@@ -40,7 +40,7 @@ export const QUEST_PAYLOAD = {
     upgrades: [
       { label: 'Óculos Redondos', value: 'round' },
       { label: 'Óculos de Sol', value: 'wayfarers' },
-      { label: 'Brinco', value: 'kurt' },
+      { label: 'Òculos de oval', value: 'kurt' },
     ],
   },
 }
