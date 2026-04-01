@@ -47,13 +47,8 @@ function FloatingQuest({ onStart, backgroundUrl = '' }) {
       animate={{
         opacity: 1,
         width: isHovered ? 350 : 74,
-        y: [0, -8, 0],
       }}
-      transition={{
-        duration: 0.35,
-        ease: 'easeOut',
-        y: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' },
-      }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className="fixed bottom-6 right-6 z-30 overflow-hidden rounded-2xl border-4 border-black bg-amber-300 p-3 text-left shadow-[8px_8px_0px_#111827]"
