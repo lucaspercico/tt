@@ -11,6 +11,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { buildAvatarUrl, generateHexCode } from './avatar'
+import heroImage from './assets/hero.png'
 import { QUEST_PAYLOAD } from './payload'
 
 const STORAGE_KEY = 'research-quest-progress-v1'
@@ -26,7 +27,9 @@ const DEFAULT_STATE = {
   hasStarted: false,
   step: 0,
   avatarSeed: 'Especialista',
-  answers: {},
+  answers: {
+    accessories: '',
+  },
   discursiveAnswers: {},
   completed: false,
   certificateCode: '',
@@ -34,14 +37,26 @@ const DEFAULT_STATE = {
 
 function FloatingQuest({ onStart, backgroundUrl = '' }) {
   const MotionAside = motion.aside
+  const MotionDiv = motion.div
+  const [isHovered, setIsHovered] = useState(false)
   const hasBackground = Boolean(backgroundUrl)
 
   return (
     <MotionAside
       initial={{ opacity: 0, y: 30, scale: 0.92 }}
-      animate={{ opacity: 1, y: [0, -8, 0], scale: 1 }}
-      transition={{ duration: 0.7, y: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' } }}
-      className="fixed bottom-6 right-6 z-30 max-w-sm rounded-2xl border-4 border-black bg-amber-300 p-5 text-left shadow-[8px_8px_0px_#111827]"
+      animate={{
+        opacity: 1,
+        width: isHovered ? 350 : 74,
+        y: [0, -8, 0],
+      }}
+      transition={{
+        duration: 0.35,
+        ease: 'easeOut',
+        y: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' },
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="fixed bottom-6 right-6 z-30 overflow-hidden rounded-2xl border-4 border-black bg-amber-300 p-3 text-left shadow-[8px_8px_0px_#111827]"
       style={hasBackground
         ? {
             backgroundImage: `linear-gradient(rgba(252, 211, 77, 0.94), rgba(252, 211, 77, 0.94)), url(${backgroundUrl})`,
@@ -51,22 +66,40 @@ function FloatingQuest({ onStart, backgroundUrl = '' }) {
         : undefined}
       aria-live="polite"
     >
-      <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-white/85 px-3 py-1 text-sm font-black text-gray-900">
-        <MessageCircle size={16} aria-hidden="true" />
-        {QUEST_PAYLOAD.popup.badge}
-      </span>
-      <div className="text-lg font-semibold leading-snug text-black">
-        <p>{QUEST_PAYLOAD.popup.title}</p>
-        <p>{QUEST_PAYLOAD.popup.description}</p>
+      <div className="flex justify-end">
+        <span
+          aria-label="Abrir detalhes da quest"
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-black bg-white text-gray-900"
+        >
+          <MessageCircle size={22} aria-hidden="true" />
+        </span>
       </div>
-      <button
-        type="button"
-        onClick={onStart}
-        className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white transition hover:-translate-y-0.5"
-      >
-        <Rocket size={20} aria-hidden="true" />
-        {QUEST_PAYLOAD.popup.buttonLabel}
-      </button>
+      {isHovered && (
+        <MotionDiv
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="pr-2"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border-2 border-black bg-white/85 px-3 py-1 text-sm font-black text-gray-900">
+            <MessageCircle size={16} aria-hidden="true" />
+            {QUEST_PAYLOAD.popup.badge}
+          </span>
+          <div className="mt-2 text-lg font-semibold leading-snug text-black">
+            <p>{QUEST_PAYLOAD.popup.title}</p>
+            <p>{QUEST_PAYLOAD.popup.description}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onStart}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-indigo-500 px-4 py-2 text-lg font-bold text-white transition hover:-translate-y-0.5"
+          >
+            <Rocket size={20} aria-hidden="true" />
+            {QUEST_PAYLOAD.popup.buttonLabel}
+          </button>
+        </MotionDiv>
+      )}
     </MotionAside>
   )
 }
@@ -135,9 +168,8 @@ function SurveyManager({ step, answers, discursiveAnswers, onChoose, onDiscursiv
 function App() {
   const MotionBar = motion.div
   const [state, setState] = useState(DEFAULT_STATE)
-  const [showQuestTrigger, setShowQuestTrigger] = useState(false)
   const hasLoaded = useRef(false)
-  const popupBackgroundUrl = import.meta.env.VITE_POPUP_BACKGROUND_URL || ''
+  const popupBackgroundUrl = import.meta.env.VITE_POPUP_BACKGROUND_URL || heroImage
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -153,7 +185,10 @@ function App() {
       setState((current) => ({
         ...current,
         ...parsed,
-        answers: parsed.answers || {},
+        answers: {
+          accessories: '',
+          ...(parsed.answers || {}),
+        },
         discursiveAnswers: parsed.discursiveAnswers || {},
       }))
     } catch {
@@ -161,12 +196,6 @@ function App() {
     } finally {
       hasLoaded.current = true
     }
-  }, [])
-
-  useEffect(() => {
-    const onUserClick = () => setShowQuestTrigger(true)
-    window.addEventListener('click', onUserClick, { once: true })
-    return () => window.removeEventListener('click', onUserClick)
   }, [])
 
   useEffect(() => {
@@ -266,13 +295,11 @@ function App() {
               <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
                 <h2 className="text-2xl font-black text-gray-900">Sua jornada começa em instantes</h2>
                 <p className="mt-2 text-lg text-gray-800">
-                  Clique em qualquer ponto da tela para exibir o popup e iniciar a jornada.
+                  Passe o mouse sobre o ícone flutuante no canto inferior direito para abrir o popup e iniciar a jornada.
                 </p>
-                {!showQuestTrigger && (
-                  <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
-                    <MousePointerClick size={18} aria-hidden="true" /> Aguardando seu clique para abrir o popup
-                  </p>
-                )}
+                <p className="mt-4 inline-flex items-center gap-2 rounded-xl border-2 border-black bg-amber-100 px-4 py-2 text-base font-bold text-gray-900">
+                  <MousePointerClick size={18} aria-hidden="true" /> Sem clique obrigatório: basta hover no ícone flutuante
+                </p>
               </section>
             ) : state.completed ? (
               <section className="rounded-2xl border-4 border-black bg-white p-6 shadow-[6px_6px_0px_#111827]">
@@ -336,7 +363,7 @@ function App() {
         </div>
       </div>
 
-      {!state.hasStarted && showQuestTrigger && (
+      {!state.hasStarted && (
         <FloatingQuest onStart={startQuest} backgroundUrl={popupBackgroundUrl} />
       )}
     </main>

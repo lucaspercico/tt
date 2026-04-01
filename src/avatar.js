@@ -1,9 +1,12 @@
-export function buildAvatarUrl(seed, answers) {
+export function buildAvatarUrl(seed, answers = {}) {
   const params = new URLSearchParams({ seed: seed || 'Especialista' })
 
   if (answers.top) params.set('top', answers.top)
   if (answers.clothing) params.set('clothing', answers.clothing)
-  if (answers.accessories) params.set('accessories', answers.accessories)
+  if (answers.accessories) {
+    params.set('accessories', answers.accessories)
+    params.set('accessoriesProbability', '100')
+  }
   if (answers.backgroundColor) params.set('backgroundColor', answers.backgroundColor)
 
   return `https://api.dicebear.com/7.x/avataaars/svg?${params.toString()}`
