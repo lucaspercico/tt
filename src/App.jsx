@@ -27,9 +27,7 @@ const DEFAULT_STATE = {
   hasStarted: false,
   step: 0,
   avatarSeed: 'Especialista',
-  answers: {
-    accessories: '',
-  },
+  answers: {},
   discursiveAnswers: {},
   completed: false,
   certificateCode: '',
@@ -164,7 +162,7 @@ function App() {
   const MotionBar = motion.div
   const [state, setState] = useState(DEFAULT_STATE)
   const hasLoaded = useRef(false)
-  const popupBackgroundUrl = import.meta.env.VITE_POPUP_BACKGROUND_URL || heroImage
+  const popupBackgroundUrl = (import.meta.env.VITE_POPUP_BACKGROUND_URL || '').trim() || heroImage
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -180,10 +178,7 @@ function App() {
       setState((current) => ({
         ...current,
         ...parsed,
-        answers: {
-          accessories: '',
-          ...(parsed.answers || {}),
-        },
+        answers: parsed.answers || {},
         discursiveAnswers: parsed.discursiveAnswers || {},
       }))
     } catch {

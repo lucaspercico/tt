@@ -1,4 +1,4 @@
-# Research Quest Builder (tt)
+# Research Quest Builder
 
 Aplicação React (Vite + Tailwind + Framer Motion) para coletar respostas discursivas e montar um avatar final com acessório selecionado.
 
@@ -209,6 +209,8 @@ Checklist:
 
 ```bash
 npm run lint
-npm run test
+npm run test -- --run
 npm run build
 ```
+
+> Observação: neste repositório, `npm run test` já executa `vitest run` (modo não interativo de CI), então `npm run test` e `npm run test -- --run` são equivalentes.
