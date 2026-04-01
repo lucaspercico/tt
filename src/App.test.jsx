@@ -19,6 +19,7 @@ describe('buildAvatarUrl', () => {
     expect(url).toContain('top=shaggy')
     expect(url).toContain('clothing=overall')
     expect(url).toContain('accessories=round')
+    expect(url).toContain('accessoriesProbability=100')
     expect(url).toContain('backgroundColor=ffd5dc')
   })
 })
@@ -34,8 +35,7 @@ describe('Research quest flow', () => {
 
   it('completes survey and shows certificate card', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('main'))
-
+    fireEvent.mouseEnter(screen.getByLabelText(/abrir detalhes da quest/i))
     fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Pesquisa em educação e tecnologia.' } })
@@ -60,11 +60,11 @@ describe('Research quest flow', () => {
     expect(screen.getByRole('button', { name: /resgatar 10 horas/i })).toBeInTheDocument()
   })
 
-  it('shows popup only after click and requires answer before continuing', () => {
+  it('expands popup on hover and requires answer before continuing', () => {
     render(<App />)
 
     expect(screen.queryByRole('button', { name: /iniciar quest/i })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('main'))
+    fireEvent.mouseEnter(screen.getByLabelText(/abrir detalhes da quest/i))
     fireEvent.click(screen.getByRole('button', { name: /iniciar quest/i }))
 
     const nextButton = screen.getByRole('button', { name: /próxima/i })
