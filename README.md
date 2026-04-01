@@ -19,23 +19,50 @@ Ao abrir a tela inicial:
 
 ---
 
-## Guia do Payload (perguntas e escolhas)
+## Manual Operacional
 
-### Onde editar
+### Gestão de Backgrounds (Tela Inicial x Tela da Quest)
+
+O app usa **dois backgrounds independentes**, configurados por variáveis de ambiente em `src/App.jsx`:
+
+- `homeBackgroundUrl` (linha ~190): controla a **Tela Inicial**
+- `questBackgroundUrl` (linha ~191): controla a **Tela da Quest**
+
+Na renderização do `<main>` (linhas ~289-307), a regra é:
+
+1. Se `!state.hasStarted` e existir `VITE_HOME_BACKGROUND_URL`, aplica o fundo inicial.
+2. Se `state.hasStarted` e existir `VITE_QUEST_BACKGROUND_URL`, aplica o fundo da quest.
+3. Sem variáveis, mantém o fundo branco padrão.
+
+Exemplo de configuração (arquivo `.env`):
+
+```bash
+VITE_HOME_BACKGROUND_URL=/background-home.png
+VITE_QUEST_BACKGROUND_URL=/background-quest.png
+VITE_POPUP_BACKGROUND_URL=https://seu-dominio/imagem-popup.png
+```
+
+> Onde mexer rapidamente: `src/App.jsx` nas constantes de environment e no `style` do `<main>`.
+
+---
+
+## Configuração do Payload (perguntas, alternativas e vínculo com acessórios)
+
+### Onde editar (arquivo principal)
 
 Todo o payload de conteúdo fica em:
 
-- `src/payload.js`
+- `src/payload.js` (toda a estrutura de conteúdo da quest)
 
 ### Formato de dados
 
 O arquivo exporta o objeto `QUEST_PAYLOAD` no formato de objeto JavaScript (estrutura equivalente a JSON).
 
-Campos principais:
+Campos principais do `QUEST_PAYLOAD`:
 
 - `popup`: textos do popup flutuante.
 - `questions`: array de perguntas discursivas.
-- `accessorySelection`: configuração da etapa de acessórios.
+- `accessorySelection`: etapa de acessórios (inclui `trait`, `slot`, `layer` e `upgrades`).
 
 Exemplo resumido:
 
@@ -53,6 +80,8 @@ export const QUEST_PAYLOAD = {
   accessorySelection: {
     question: '...',
     trait: 'accessories',
+    slot: 'face',
+    layer: 100,
     upgrades: [
       { label: 'Óculos Redondos', value: 'round' },
       { label: 'Óculos de Sol', value: 'wayfarers' },
@@ -85,6 +114,8 @@ Exemplo:
 No objeto `accessorySelection`:
 
 - `trait` deve continuar como `accessories` para manter compatibilidade com a montagem da URL do avatar.
+- `slot` define o slot lógico do acessório (ex.: `face`). Cada slot aceita **apenas um item por vez**.
+- `layer` define prioridade de camada (maior valor = maior prioridade visual).
 - `upgrades` é um array de opções renderizadas como botões.
 
 Cada item precisa de:
@@ -112,7 +143,13 @@ Exemplo de parte do estado:
 
 ```js
 answers: {
-  accessories: 'round'
+  accessories: 'round',
+  accessorySlots: {
+    face: {
+      value: 'round',
+      layer: 100
+    }
+  }
 },
 discursiveAnswers: {
   'discursive-1': '...'
@@ -124,10 +161,11 @@ discursiveAnswers: {
 ## Regras de Negócio (Acessórios)
 
 1. A etapa de acessório é obrigatória para concluir a quest.
-2. Apenas um acessório pode ficar ativo por vez.
-3. Ao selecionar outro botão, o valor anterior é substituído em `answers.accessories`.
-4. O preview do avatar usa `buildAvatarUrl(seed, answers)` (`src/avatar.js`).
-5. Quando `answers.accessories` está preenchido, a URL inclui:
+2. Cada `slot` de acessório aceita somente 1 item ativo.
+3. Ao selecionar novo item do mesmo slot, o anterior é substituído em `answers.accessorySlots[slot]`.
+4. `answers.accessories` é mantido para retrocompatibilidade e preview rápido.
+5. O preview do avatar usa `buildAvatarUrl(seed, answers)` (`src/avatar.js`) e resolve o acessório por camada com `resolveAccessoryValue`.
+6. Quando houver acessório resolvido, a URL inclui:
    - `accessories=<valor>`
    - `accessoriesProbability=100` (garante aplicação visual do acessório)
 
@@ -135,7 +173,7 @@ discursiveAnswers: {
 
 ## Guia de Assets (Background)
 
-### Popup flutuante
+### Popup flutuante (ícone/caixa)
 
 O popup aceita imagem de background pela variável:
 
@@ -147,6 +185,16 @@ Comportamento atual:
 
 - Se a variável existir, ela é usada no popup.
 - Se não existir, a aplicação usa fallback local: `src/assets/hero.png`.
+
+### Tela Inicial
+
+- Variável: `VITE_HOME_BACKGROUND_URL`
+- Código: `src/App.jsx` (constante `homeBackgroundUrl` e `style` do `<main>`)
+
+### Tela da Quest
+
+- Variável: `VITE_QUEST_BACKGROUND_URL`
+- Código: `src/App.jsx` (constante `questBackgroundUrl` e `style` do `<main>`)
 
 ### Onde colocar arquivos de background
 
@@ -169,6 +217,21 @@ Para browser/web modernos, priorize:
 
 ## Troubleshooting (Solução de Problemas)
 
+### Seções exatas para manutenção rápida
+
+1. **Fluxo de navegação e hover popup**
+   - Arquivo: `src/App.jsx`
+   - Trechos: `FloatingQuest`, `state.hasStarted`, render condicional da tela
+2. **Perguntas e alternativas**
+   - Arquivo: `src/payload.js`
+   - Trechos: `questions`, `accessorySelection.upgrades`
+3. **Lógica de acessórios (slot/camada)**
+   - Arquivos: `src/App.jsx` (`withLayeredAccessory`) e `src/avatar.js` (`resolveAccessoryValue`)
+4. **Preview/renderização do avatar**
+   - Arquivo: `src/avatar.js` (`buildAvatarUrl`)
+5. **Testes da jornada**
+   - Arquivo: `src/App.test.jsx`
+
 ### 1) Acessório não aparece no avatar
 
 Checklist:
@@ -178,11 +241,14 @@ Checklist:
 - Verifique se o `value` da opção é válido para o estilo DiceBear `avataaars`.
 - Inspecione a URL do avatar e confirme presença de `accessories=` e `accessoriesProbability=100`.
 
-### 2) Background do popup não carrega
+### 2) Background da tela não carrega
 
 Checklist:
 
-- Se usa variável de ambiente, confirme `VITE_POPUP_BACKGROUND_URL` definida no ambiente do Vite.
+- Se usa variável de ambiente, confirme:
+  - `VITE_HOME_BACKGROUND_URL` (tela inicial)
+  - `VITE_QUEST_BACKGROUND_URL` (tela da quest)
+  - `VITE_POPUP_BACKGROUND_URL` (popup)
 - Valide se a URL retorna imagem com status 200.
 - Verifique possíveis bloqueios de rede/CORS.
 - Sem variável definida, confirme existência de `src/assets/hero.png` (fallback).
